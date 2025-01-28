@@ -1,0 +1,1 @@
+`npx @portkey-ay/gateway`
