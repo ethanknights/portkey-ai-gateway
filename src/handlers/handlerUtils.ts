@@ -351,6 +351,18 @@ export async function tryPost(
   } = await beforeRequestHookHandler(c, hookSpan.id));
 
   if (brhResponse) {
+    if (!providerConfig?.requestHandlers?.[fn]) {
+      transformedRequestBody =
+        method === 'POST'
+          ? transformToProviderRequest(
+              provider,
+              params,
+              requestBody,
+              fn,
+              requestHeaders
+            )
+          : requestBody;
+    }
     return createResponse(brhResponse, undefined, false, false);
   }
 
@@ -902,6 +914,7 @@ export function constructConfigFromRequestHeaders(
       requestHeaders[`x-${POWERED_BY}-azure-deployment-type`],
     azureApiVersion: requestHeaders[`x-${POWERED_BY}-azure-api-version`],
     azureEndpointName: requestHeaders[`x-${POWERED_BY}-azure-endpoint-name`],
+    azureExtraParams: requestHeaders[`x-${POWERED_BY}-azure-extra-params`],
   };
 
   const awsConfig = {
@@ -1313,7 +1326,11 @@ export async function beforeRequestHookHandler(
     const hooksResult = await hooksManager.executeHooks(
       hookSpanId,
       ['syncBeforeRequestHook'],
-      { env: env(c) }
+      {
+        env: env(c),
+        getFromCacheByKey: c.get('getFromCacheByKey'),
+        putInCacheWithValue: c.get('putInCacheWithValue'),
+      }
     );
 
     span = hooksManager.getSpan(hookSpanId) as HookSpan;
